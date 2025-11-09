@@ -49,7 +49,7 @@ const userLogin = async (req: Request, res: Response) => {
         if (!email && !password) {
             return res.status(200).json({ error: true, message: "email, password are required." });
         }
-        const user = await Users.findOne({ email: email });
+        const user = await Users.findOne({ email: email }).populate('roleId');;
         if (user == null) {
             return res.status(200).json({ error: true, message: "Invalid email" });
         }

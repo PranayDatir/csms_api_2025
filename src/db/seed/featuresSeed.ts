@@ -18,7 +18,7 @@ mongoose.connect(config.mongo.url
     seedFeatures();
 }).catch((error) => Logging.error(error));
 
-const allFeaturess = [
+export const allFeaturess = [
     {
         _id: 'Admin',
         title: 'Admin Role',

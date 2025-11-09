@@ -1,59 +1,69 @@
-import { NextFunction, Request, Response } from 'express';
-import dotenv from 'dotenv';
-import UserRoles, { IUserRole } from '../models/userRole.model';
-import { IUser } from '../models/users.model';
-import { allFeaturess } from '../db/seed/featuresSeed';
-dotenv.config();
+import { NextFunction, Request, Response } from "express";
+import features, { IFeature } from "../models/features.model";
+import { IUserRole } from "../models/userRole.model";
+import { IUser } from "../models/users.model";
 
 
 const create = async (req: Request, res: Response, next: NextFunction) => {
-  const { name, features, featureId, isDisabled } =
-    req.body as IUserRole;
+  const {
+    _id,
+    title,
+    description,
+    message,
+    tag,
+    isDisabled,
+    isFeatureSelected,
+    isRoleFeature,
+  } = req.body as IFeature;
 
   const loggedUser = res.locals.loggedUser as IUser;
 
   if (
-    (<IUserRole>loggedUser.roleId).features.includes('createRole')
+    (<IUserRole>loggedUser.roleId).features.includes('createFeature')
   ) {
-    
-    const createdModel = new UserRoles({
-      _id: name,
-      features,
-      isDisabled,
-      featureId,
-      createdByUserId: loggedUser._id!,
-      
-    });
-
-    try {
-      const result = await createdModel.save();
-      // Logging.info(result)
-      return res.status(201).json({
-        // data: result,
-        error: false,
-        message: "Role added successfully.",
+      const createdModel = new features({
+        _id: _id,
+        title,
+        description,
+        message,
+        isDisabled,
+        isFeatureSelected,
+        isRoleFeature,
+        tag,
+        // createdByUserId: loggedUser._id.toString(),
       });
-    } catch (error: any) {
-      console.error(error);
-      let message = "Unknown Error!";
-      if (!!error["code"]) {
-        const idx = error["index"];
-        const keys = Object.keys(error["keyValue"]);
-        const values = Object.values(error["keyValue"]);
-        message =
-          error["code"] == 11000
-            ? `${keys[idx]} ${values[idx]} already exists`
-            : "Unknown Error!";
+    
+      try {
+        const result = await createdModel.save();
+        // Logging.info(result)
+        return res.status(201).json({
+          // data: result,
+          error: false,
+          message: "Feature added successfully.",
+        });
+      } catch (error: any) {
+        console.error(error);
+        let message = "Unknown Error!";
+        if (!!error["code"]) {
+          const idx = error["index"];
+          const keys = Object.keys(error["keyValue"]);
+          const values = Object.values(error["keyValue"]);
+          message =
+            error["code"] == 11000
+              ? `${keys[idx]} ${values[idx]} already exists`
+              : "Unknown Error!";
+        }
+    
+        return res.status(200).json({ error: true, message: message });
       }
 
-      return res.status(200).json({ error: true, message: message });
-    }
-  } else {
+  }else{
     return res.status(200).json({
-      error: true,
-      message: "You Dont have permission.",
-    });
+        error: true,
+        message: "You Dont have permission.",
+      });
   }
+
 };
 
 const readAll = async (req: Request, res: Response, next: NextFunction) => {
@@ -63,9 +73,11 @@ const readAll = async (req: Request, res: Response, next: NextFunction) => {
 
   const loggedUser = res.locals.loggedUser as IUser;
 
-  if ((<IUserRole>loggedUser.roleId).features.includes('readRole')) {
-    let filter = {};
+  let filter = {};
 
+  if (
+    (<IUserRole>loggedUser.roleId).features.includes('readFeature')
+  ) {
     try {
       if (req.query.currentPage && req.query.itemsPerPage) {
         if (
@@ -78,9 +90,9 @@ const readAll = async (req: Request, res: Response, next: NextFunction) => {
 
         skip = (currentPage - 1) * itemsPerPage; // Calculate skip based on currentPage number
 
-        const totalCount = await UserRoles.countDocuments(filter); // Fetch total count efficiently
+        const totalCount = await features.countDocuments(filter); // Fetch total count efficiently
 
-        const data = await UserRoles.find(filter)
+        const data = await features.find(filter)
           // .populate({ path: 'orgId', select: { _id: 1, brandName: 1, orgType: 1 } })
           // .populate({
           //   path: "orgManagerId",
@@ -106,17 +118,10 @@ const readAll = async (req: Request, res: Response, next: NextFunction) => {
           message: "UserRoles found",
         });
       } else {
-        const data = await UserRoles.find({});
-
-        const filteredData = data.filter((x) =>
-          (<IUserRole>loggedUser.roleId).features.includes(x.featureId)
-        );
-        console.warn(filteredData);
-        return res.status(200).json({
-          data: filteredData,
-          error: false,
-          message: "UserRoles found",
-        });
+        const data = await features.find(filter);
+        return res
+          .status(200)
+          .json({ data: data, error: false, message: "UserRoles found" });
       }
     } catch (error) {
       console.error(error);
@@ -133,18 +138,19 @@ const readAll = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 const readOne = async (req: Request, res: Response, next: NextFunction) => {
-  const _id = req.params.id;
-
+  const id = req.params.id;
   const loggedUser = res.locals.loggedUser as IUser;
 
-  if ((<IUserRole>loggedUser.roleId).features.includes('readRole')) {
+  if (
+    (<IUserRole>loggedUser.roleId).features.includes('readFeature')
+  ) {
     try {
-      const data = await UserRoles.findById(_id);
+      const data = await features.findById(id);
       return data
         ? res
             .status(201)
-            .json({ data: data, error: false, message: "UserRole Found" })
-        : res.status(200).json({ error: true, message: "UserRole not found" });
+            .json({ data: data, error: false, message: "Feature Found" })
+        : res.status(200).json({ error: true, message: "Feature not found" });
     } catch (error) {
       console.error(error);
       return res
@@ -161,29 +167,49 @@ const readOne = async (req: Request, res: Response, next: NextFunction) => {
 
 const updateOne = async (req: Request, res: Response, next: NextFunction) => {
   const id = req.params.id;
-  const { features, featureId, isDisabled } = req.body as IUserRole;
-
-  const valuesArray = { features, featureId, isDisabled };
+  const {
+    title,
+    description,
+    message,
+    tag,
+    isDisabled,
+    isFeatureSelected,
+    isRoleFeature,
+  } = req.body as IFeature;
 
   const loggedUser = res.locals.loggedUser as IUser;
 
-  if ((<IUserRole>loggedUser.roleId).features.includes('editRole')) {
+  const valuesArray = {
+    title,
+    description,
+    message,
+    tag,
+    isDisabled,
+    isFeatureSelected,
+    isRoleFeature,
+  };
+
+  if (
+    (<IUserRole>loggedUser.roleId).features.includes('editFeature')
+  ) {
     var updater: { [key: string]: any } = {};
 
-    for (const [key, value] of Object.entries(valuesArray as IUserRole)) {
+    for (const [key, value] of Object.entries(valuesArray as IFeature)) {
       if (value != undefined) {
         updater[key] = value;
       }
     }
 
     try {
-      const updatedModel = await UserRoles.findByIdAndUpdate(
+      const updatedModel = await features.findByIdAndUpdate(
         { _id: id },
         updater
       );
-      return res
-        .status(200)
-        .json({ data: updatedModel, error: false, message: "Role updated." });
+      return res.status(200).json({
+        data: updatedModel,
+        error: false,
+        message: "Feature updated.",
+      });
     } catch (error) {
       console.error(error);
       return res
@@ -200,16 +226,18 @@ const updateOne = async (req: Request, res: Response, next: NextFunction) => {
 
 const updateMany = async (req: Request, res: Response, next: NextFunction) => {
   const { ids } = req.body;
-  const { features, isDisabled } = req.body as IUserRole;
-
-  const valuesArray = { features, isDisabled };
+  const { message, isDisabled } = req.body as IFeature;
 
   const loggedUser = res.locals.loggedUser as IUser;
 
-  if ((<IUserRole>loggedUser.roleId).features.includes('editRole')) {
+  if (
+    (<IUserRole>loggedUser.roleId).features.includes('editFeature')
+  ) {
+    const valuesArray = { message, isDisabled };
+
     var updater: { [key: string]: any } = {};
 
-    for (const [key, value] of Object.entries(valuesArray as IUserRole)) {
+    for (const [key, value] of Object.entries(valuesArray as IFeature)) {
       if (value != undefined) {
         updater[key] = value;
       }
@@ -217,13 +245,15 @@ const updateMany = async (req: Request, res: Response, next: NextFunction) => {
 
     try {
       if (Array.isArray(ids) && ids.length > 0) {
-        const updatedModel = await UserRoles.updateMany(
+        const updatedModel = await features.updateMany(
           { _id: { $in: ids } },
           updater
         );
-        return res
-          .status(200)
-          .json({ data: updatedModel, error: false, message: "Role updated." });
+        return res.status(200).json({
+          data: updatedModel,
+          error: false,
+          message: "Feature updated.",
+        });
       } else {
         return res
           .status(500)
@@ -248,26 +278,29 @@ const deleteOne = async (req: Request, res: Response, next: NextFunction) => {
 
   const loggedUser = res.locals.loggedUser as IUser;
 
-  if ((<IUserRole>loggedUser.roleId).features.includes('deleteRole')) {
+  if (
+    (<IUserRole>loggedUser.roleId).features.includes('deleteFeature')
+  ) {
     try {
-      const data = await UserRoles.findByIdAndDelete({ _id: id });
-      return data
-        ? res
-            .status(201)
-            .json({ data: data, error: false, message: "UserRoles Deleted" })
-        : res.status(200).json({ error: true, message: "UserRoles not found" });
-    } catch (error) {
-      console.error(error);
-      return res
-        .status(200)
-        .json({ data: error, error: true, message: "Something Went wrong!" });
-    }
+        const data = await features.findByIdAndDelete({ _id: id });
+        return data
+          ? res
+              .status(201)
+              .json({ data: data, error: false, message: "UserRoles Deleted" })
+          : res.status(200).json({ error: true, message: "Feature not found" });
+      } catch (error) {
+        console.error(error);
+        return res
+          .status(200)
+          .json({ data: error, error: true, message: "Something Went wrong!" });
+      }
   } else {
     return res.status(200).json({
       error: true,
       message: "You Dont have permission.",
     });
   }
+
 };
 
 export default { create, readAll, readOne, updateOne, updateMany, deleteOne };

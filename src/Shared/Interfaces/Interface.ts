@@ -16,3 +16,10 @@ export interface IPagination {
     // applicationInterfaceType:string
 
 }
+
+export interface IJwtLocals {
+  _id: string;
+  iat: number;
+  exp: number;
+  iss: string;
+}

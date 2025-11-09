@@ -1,15 +1,15 @@
 import express from 'express';
-import checkUserAuth, { authorizeRoles } from '../middleware/auth';
+import auth from '../middleware/auth';
 import ticketController from '../Controllers/ticketController';
 import { Role } from '../Shared/Constants/userRoles';
 import { Routes } from '../Shared/Constants/Route';
 
-const ticketRouter = express.Router();
+const router = express.Router();
 
-ticketRouter.route(Routes.TICKET).post(checkUserAuth, authorizeRoles(Role.CONSUMER, Role.SUPPORT), ticketController.raisedTicket);
-ticketRouter.route(Routes.TICKET).get(checkUserAuth, authorizeRoles(Role.ADMIN, Role.SUPPORT, Role.CONSUMER), ticketController.getAllTickets);
-ticketRouter.route(Routes.TICKET + "/:id").patch(checkUserAuth, authorizeRoles(Role.ADMIN, Role.SUPPORT), ticketController.assignedToUserId);
-ticketRouter.route(Routes.TICKET + "/:id").delete(checkUserAuth, authorizeRoles(Role.ADMIN, Role.CONSUMER), ticketController.deleteTicket);
+router.route(Routes.TICKET).post(auth.checkAuthWeb, ticketController.raisedTicket);
+router.route(Routes.TICKET).get(auth.checkAuthWeb, ticketController.getAllTickets);
+router.route(Routes.TICKET + "/:id").patch(auth.checkAuthWeb, ticketController.assignedToUserId);
+router.route(Routes.TICKET + "/:id").delete(auth.checkAuthWeb, ticketController.deleteTicket);
 
-export default ticketRouter;
+export default router;
 

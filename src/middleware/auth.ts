@@ -1,33 +1,62 @@
-import { NextFunction, Response } from 'express';
-import Users from '../models/users.model';
+import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { CRequest } from '../Shared/Interfaces/Interface';
+import config from '../db/config/config';
+import { IJwtLocals } from '../Shared/Interfaces/Interface';
+import usersModel from '../models/users.model';
 
-const checkUserAuth = async (req: CRequest, res: Response, next: NextFunction) => {
-    const token = req.header('Authorization');
-    if (!token) {
-        return res.status(401).json({ error: true, message: "Unauthorized user." });
-    }
-    const jwtToken = token.replace("Bearer", "").trim();
-
+const checkAuthWeb = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const isVerified = jwt.verify(jwtToken, process.env.JWT_SECRET_KEY as string) as { userId: string, email: string };
-        const user = await Users.findById(isVerified.userId);
-        req.user = user;
-        next();
-    } catch (error) {
-        console.log("Middleware Auth -->", error);
-        return res.status(401).json({ error: true, message: "Unauthorized user." });
-    }
-}
+        let token = req.headers.authorization?.split(' ')[1];
 
-export const authorizeRoles = (...roles: string[]) => {
-    return (req: CRequest, res: Response, next: NextFunction) => {
-        if (!req.user || !roles.includes(req.user.roleId as string)) {
-            return res.status(200).json({ error: true, message: "You don't have permission" });
+        if (token) {
+            jwt.verify(token, config.server.token.secret, async (error, decoded) => {
+                if (error) {
+                    return res.status(200).json({
+                        error: true,
+                        message: 'Unable decode token'
+                    });
+                } else {
+                    const jwtLocal = decoded as IJwtLocals;
+                    // console.log(jwtLocal)
+                    res.locals.jwt = jwtLocal;
+                    if (jwtLocal.exp - jwtLocal.iat > 0) {
+                        try {
+                            const user = await usersModel.findById(jwtLocal._id).populate('roleId');
+                            console.log(jwtLocal);
+                            if (!!user) {
+                                res.locals.loggedUser = user.toObject();
+                                next();
+                            } else {
+                                return res.status(200).json({
+                                    error: true,
+                                    message: 'Login Failed'
+                                });
+                            }
+                        } catch (error) {
+                            console.error(error);
+                            return res.status(200).json({
+                                error: true,
+                                message: 'Login Failed'
+                            });
+                        }
+                    } else {
+                        return res.status(200).json({
+                            error: true,
+                            message: 'Login Failed | Token Expired'
+                        });
+                    }
+                }
+            });
+        } else {
+            return res.status(200).json({
+                error: true,
+                message: 'Login Failed | Token Not Found'
+            });
         }
-        next();
-    };
+    } catch (error) {
+        console.error(error)
+    }
 };
 
-export default checkUserAuth;
+
+export default { checkAuthWeb };

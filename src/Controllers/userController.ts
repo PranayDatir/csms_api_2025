@@ -58,7 +58,7 @@ const userLogin = async (req: Request, res: Response) => {
             console.log(user.roleId);
 
             //Generate JWT Token
-            const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET_KEY as string, { expiresIn: '1h' });
+            const token = jwt.sign({ _id: user._id, email: user.email }, process.env.SERVER_TOKEN_SECRET as string, { expiresIn: '1h' });
             res.status(200).json({ error: false, message: "Login Successfully.", access_token: token, data: user });
 
         } else {
@@ -77,9 +77,9 @@ const refreshToken = async (req: Request, res: Response) => {
             return res.status(403).send({ error: true, message: "Invalid Token" });
         }
         const trimToken = authorizedToken.replace("Bearer", "").trim();
-        const isVerified = jwt.verify(trimToken, process.env.JWT_SECRET_KEY as string) as { email: string };
+        const isVerified = jwt.verify(trimToken, process.env.SERVER_TOKEN_SECRET as string) as { email: string };
         const data = await Users.findOne({ email: isVerified.email });
-        const jwtToken = jwt.sign({ userId: data?._id }, process.env.JWT_SECRET_KEY as string, { expiresIn: '1d' });
+        const jwtToken = jwt.sign({ _id: data?._id }, process.env.SERVER_TOKEN_SECRET as string, { expiresIn: '1d' });
         res.status(200).send({ error: false, access_token: jwtToken, data: data });
     } catch (error) {
         console.log(error);

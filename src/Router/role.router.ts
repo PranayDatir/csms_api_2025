@@ -1,9 +1,15 @@
 import express from 'express';
 import roleController from '../Controllers/roleController';
-import checkUserAuth, { authorizeRoles } from '../middleware/auth';
+import auth from '../middleware/auth';
 
-const roleRouter = express.Router();
+const router = express.Router();
 
-roleRouter.route("/createRole").post(checkUserAuth, authorizeRoles("Admin"),roleController.createRole);
 
-export default roleRouter;
+router.post("/", auth.checkAuthWeb, roleController.create);
+router.get("/", auth.checkAuthWeb, roleController.readAll);
+router.get("/:id", auth.checkAuthWeb, roleController.readOne);
+router.patch("/", auth.checkAuthWeb, roleController.updateMany);
+router.patch("/:id", auth.checkAuthWeb, roleController.updateOne);
+router.delete("/:id", auth.checkAuthWeb, roleController.deleteOne);
+
+export default router;
